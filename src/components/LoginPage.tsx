@@ -2,11 +2,20 @@ import React from 'react';
 import Logo from './Logo';
 import LoginForm from './LoginForm';
 import { MapPin, Navigation, Compass, Armchair as Wheelchair, Map } from 'lucide-react';
+import { supabase } from "../utils/supabaseClient"
 
 const LoginPage: React.FC = () => {
-  const handleLogin = (email: string, password: string, remember: boolean) => {
-    console.log('Login attempt:', { email, password, remember });
-    // In a real app, you would handle authentication here
+  const handleLogin = async (email: string, password: string, remember: boolean) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert('Login failed: ' + error.message);
+      return;
+    }
+    localStorage.setItem('session', JSON.stringify(data.session));
+    if (remember) {
+      localStorage.setItem('remember', 'true');
+    }
+    window.location.href = '/dashboard';
   };
 
   return (
@@ -50,7 +59,7 @@ const LoginPage: React.FC = () => {
           
           <div className="flex justify-end">
             <div className="bg-white p-4 rounded-full shadow-md">
-              <Wheelchair className="h-8 w-8 text-violet-600" />
+              <Wheelchair className="h-8 w-8 text-violet barn600" />
             </div>
           </div>
         </div>
