@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chennai Traffic + Accessible Hotels</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+  <style>
+    #map { height: 100vh; }
+    #filterBox {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      z-index: 1000;
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="filterBox">
+    <label><input type="checkbox" id="wheelchairOnly" /> ♿ Show only wheelchair-accessible hotels</label>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const apiKey = 'IOpdfhXwr7Uyg0QwKcviaB5fa4SJoN4b'; // Replace with your actual TomTom API key
+    const map = L.map('map').setView([13.0827, 80.2707], 12); // Chennai
+
+    // TomTom map and traffic
+    L.tileLayer(`https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${apiKey}`, {
+      attribution: '&copy; <a href="https://www.tomtom.com">TomTom</a>',
+      maxZoom: 18
+    }).addTo(map);
+
+    L.tileLayer(`https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${apiKey}`, {
+      opacity: 0.7
+    }).addTo(map);
+
+    // TomTom traffic incidents
+    fetch(`https://api.tomtom.com/traffic/services/5/incidents?bbox=12.9,79.9,13.3,80.4&fields=all&key=${apiKey}`)
+      .then(res => res.json())
+      .then(data => {
+        data.incidents.forEach(incident => {
+          const { geometry, properties } = incident;
+          const coords = geometry.coordinates;
+          L.marker([coords[1], coords[0]])
+            .addTo(map)
+            .bindPopup(`<b>Type:</b> ${properties.eventCode}<br><b>Description:</b> ${properties.description}`);
+        });
+      });
+
+    // Hotel marker cluster group
+    const hotelCluster = L.markerClusterGroup();
+    let allHotelMarkers = [];
+
+    // Load hotels from Overpass API
+    function loadHotels(wheelchairOnly = false) {
+      hotelCluster.clearLayers();
+      const query = wheelchairOnly
+        ? "[out:json];area['name'='Chennai']->.a;(node['tourism'='hotel']['wheelchair'='yes'](area.a););out;"
+        : "[out:json];area['name'='Chennai']->.a;(node['tourism'='hotel'](area.a););out;";
+
+      fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query))
+        .then(res => res.json())
+        .then(data => {
+          allHotelMarkers = data.elements.map(hotel => {
+            const lat = hotel.lat;
+            const lon = hotel.lon;
+            const name = hotel.tags.name || "Unnamed Hotel";
+            const accessible = hotel.tags.wheelchair === "yes" ? "♿ Accessible" : "🚫 Not Accessible";
+
+            return L.marker([lat, lon], {
+              icon: L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/484/484167.png',
+                iconSize: [25, 25],
+                iconAnchor: [12, 25],
+                popupAnchor: [0, -25]
+              })
+            }).bindPopup(`<b>🏨 Hotel:</b> ${name}<br><b>Status:</b> ${accessible}`);
+          });
+
+          hotelCluster.addLayers(allHotelMarkers);
+          map.addLayer(hotelCluster);
+        });
+    }
+
+    // Initial load (all hotels)
+    loadHotels();
+
+    // Checkbox toggle for wheelchair filter
+    document.getElementById("wheelchairOnly").addEventListener("change", function() {
+      const showAccessible = this.checked;
+      loadHotels(showAccessible);
+    });
+  </script>
+</body>
+</html>
