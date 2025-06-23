@@ -1,108 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chennai Traffic + Accessible Hotels</title>
+  <title>Chennai Cafes & Restaurants</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-
   <style>
     #map { height: 100vh; }
-    #filterBox {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: white;
-      z-index: 1000;
-      padding: 8px 12px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      font-family: sans-serif;
-    }
   </style>
 </head>
 <body>
-
-  <div id="filterBox">
-    <label><input type="checkbox" id="wheelchairOnly" /> ♿ Show only wheelchair-accessible hotels</label>
-  </div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-
   <script>
-    const apiKey = 'IOpdfhXwr7Uyg0QwKcviaB5fa4SJoN4b'; // Replace with your actual TomTom API key
-    const map = L.map('map').setView([13.0827, 80.2707], 12); // Chennai
+    const map = L.map('map').setView([13.05, 80.25], 12); // Center on Chennai
 
-    // TomTom map and traffic
-    L.tileLayer(`https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=${apiKey}`, {
-      attribution: '&copy; <a href="https://www.tomtom.com">TomTom</a>',
-      maxZoom: 18
+    // Base map
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    L.tileLayer(`https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=${apiKey}`, {
-      opacity: 0.7
-    }).addTo(map);
+    // Small red dot icon
+    const redDot = L.divIcon({
+      className: '',
+      html: '<div style="width:8px;height:8px;background:red;border-radius:50%;"></div>',
+      iconSize: [8, 8]
+    });
 
-    // TomTom traffic incidents
-    fetch(`https://api.tomtom.com/traffic/services/5/incidents?bbox=12.9,79.9,13.3,80.4&fields=all&key=${apiKey}`)
-      .then(res => res.json())
-      .then(data => {
-        data.incidents.forEach(incident => {
-          const { geometry, properties } = incident;
-          const coords = geometry.coordinates;
-          L.marker([coords[1], coords[0]])
-            .addTo(map)
-            .bindPopup(`<b>Type:</b> ${properties.eventCode}<br><b>Description:</b> ${properties.description}`);
-        });
-      });
+    // List of places
+    const places = [
+      { name: "The Black Pearl", lat: 13.0789, lon: 80.2227 },
+      { name: "Basil With A Twist", lat: 13.0453, lon: 80.2458 },
+      { name: "Ambrosia", lat: 13.0478, lon: 80.2428 },
+      { name: "Kipling Cafe", lat: 12.9099, lon: 80.2483 },
+      { name: "Amelie's", lat: 13.0039, lon: 80.2485 },
+      { name: "Ciclo Café", lat: 13.0031, lon: 80.2443 },
+      { name: "Writer's Cafe", lat: 13.0505, lon: 80.2541 },
+      { name: "The English Tearoom", lat: 13.036, lon: 80.2519 },
+      { name: "L'Amour", lat: 13.0298, lon: 80.2457 },
+      { name: "Madras House", lat: 13.0841, lon: 80.2078 },
+      { name: "Jonah's Bistro", lat: 13.0898, lon: 80.2241 },
+      { name: "The Fat Monk", lat: 13.0592, lon: 80.2475 },
+      { name: "Ashvita Bistro", lat: 13.0487, lon: 80.2647 },
+      { name: "The Brew Room", lat: 13.0617, lon: 80.2464 },
+      { name: "Boardwalk", lat: 13.0119, lon: 80.2223 },
+      { name: "Cafe G", lat: 13.0429, lon: 80.2486 },
+      { name: "Paprika", lat: 13.0401, lon: 80.2484 },
+      { name: "The Lobby Cafe", lat: 13.0658, lon: 80.2741 },
+      { name: "Food Exchange", lat: 13.0294, lon: 80.2458 },
+      { name: "Hilton - Vasco's", lat: 13.0245, lon: 80.2081 },
+      { name: "ITC Grand Chola - Pavilion", lat: 13.0108, lon: 80.2206 },
+      { name: "Park Hyatt - Dining Room", lat: 12.9967, lon: 80.2185 },
+      { name: "The Leela - Spectra", lat: 13.0175, lon: 80.2713 },
+      { name: "Radisson - Kabab Factory", lat: 12.9922, lon: 80.1983 },
+      { name: "The Gateway Hotel", lat: 12.9090, lon: 80.2255 },
+      { name: "Cafe Central", lat: 12.9157, lon: 80.2227 },
+      { name: "Sandy's Chocolate Lab", lat: 13.0425, lon: 80.2520 },
+      { name: "Waffles Thru The Day", lat: 13.061, lon: 80.2470 },
+      { name: "The Sandwich Shop", lat: 13.0033, lon: 80.2584 },
+      { name: "Saravana Bhavan", lat: 13.05, lon: 80.2647 },
+      { name: "Murugan Idli Shop", lat: 13.0371, lon: 80.2319 },
+      { name: "Sangeetha Veg", lat: 13.0374, lon: 80.2659 },
+      { name: "Adyar Ananda Bhavan", lat: 13.0059, lon: 80.2576 },
+      { name: "Cream Centre", lat: 13.0232, lon: 80.2635 },
+      { name: "Barbeque Nation", lat: 13.0436, lon: 80.2371 },
+      { name: "Absolute Barbecues", lat: 13.0478, lon: 80.2429 },
+      { name: "Zaitoon", lat: 13.0649, lon: 80.2464 },
+      { name: "Copper Chimney", lat: 13.0487, lon: 80.2541 },
+      { name: "Ponnusamy Hotel", lat: 13.0471, lon: 80.2543 },
+      { name: "Buhari Restaurant", lat: 13.0601, lon: 80.2644 },
+      { name: "Annalakshmi", lat: 13.0763, lon: 80.2435 },
+      { name: "Kappa Chakka Kandhari", lat: 13.062, lon: 80.2461 },
+      { name: "Southern Spice", lat: 13.0652, lon: 80.2507 },
+      { name: "Pan Asian", lat: 13.0108, lon: 80.2206 },
+      { name: "China XO", lat: 13.0175, lon: 80.2713 },
+      { name: "Ottimo", lat: 13.0108, lon: 80.2206 },
+      { name: "Focaccia", lat: 13.0429, lon: 80.2486 },
+      { name: "Benjarong", lat: 13.0378, lon: 80.2520 },
+      { name: "Savory Sea Shell", lat: 13.078, lon: 80.2274 },
+      { name: "Sea View", lat: 12.7845, lon: 80.2312 }
+    ];
 
-    // Hotel marker cluster group
-    const hotelCluster = L.markerClusterGroup();
-    let allHotelMarkers = [];
-
-    // Load hotels from Overpass API
-    function loadHotels(wheelchairOnly = false) {
-      hotelCluster.clearLayers();
-      const query = wheelchairOnly
-        ? "[out:json];area['name'='Chennai']->.a;(node['tourism'='hotel']['wheelchair'='yes'](area.a););out;"
-        : "[out:json];area['name'='Chennai']->.a;(node['tourism'='hotel'](area.a););out;";
-
-      fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query))
-        .then(res => res.json())
-        .then(data => {
-          allHotelMarkers = data.elements.map(hotel => {
-            const lat = hotel.lat;
-            const lon = hotel.lon;
-            const name = hotel.tags.name || "Unnamed Hotel";
-            const accessible = hotel.tags.wheelchair === "yes" ? "♿ Accessible" : "🚫 Not Accessible";
-
-            return L.marker([lat, lon], {
-              icon: L.icon({
-                iconUrl: 'https://cdn-icons-png.flaticon.com/512/484/484167.png',
-                iconSize: [25, 25],
-                iconAnchor: [12, 25],
-                popupAnchor: [0, -25]
-              })
-            }).bindPopup(`<b>🏨 Hotel:</b> ${name}<br><b>Status:</b> ${accessible}`);
-          });
-
-          hotelCluster.addLayers(allHotelMarkers);
-          map.addLayer(hotelCluster);
-        });
-    }
-
-    // Initial load (all hotels)
-    loadHotels();
-
-    // Checkbox toggle for wheelchair filter
-    document.getElementById("wheelchairOnly").addEventListener("change", function() {
-      const showAccessible = this.checked;
-      loadHotels(showAccessible);
+    // Add markers
+    places.forEach(place => {
+      L.marker([place.lat, place.lon], { icon: redDot })
+        .addTo(map)
+        .bindPopup(`<b>${place.name}</b>`);
     });
   </script>
 </body>
